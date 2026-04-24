@@ -1,64 +1,69 @@
 # Quran Circles Platform
 
-منصة تنظيم حلقات حفظ القرآن الكريم في الجوامع، مبنية على:
+A web platform for managing Quran memorization circles in mosques.
 
-- `frontend`: React + TypeScript + Vite
-- `backend`: NestJS + TypeScript + TypeORM
-- قاعدة البيانات: PostgreSQL
+## Tech Stack
 
-## الأدوار المدعومة
+- Frontend: React, TypeScript, Vite
+- Backend: NestJS, TypeScript, TypeORM
+- Database: PostgreSQL
+- Runtime: Docker Compose
 
-- مشرف الحلقة: يشاهد طلاب حلقته فقط ويقيّم الصفحات.
-- مدير الجامع: يدير الطلاب في الحلقات ويطلب اختبارًا من المدير العام.
-- المدير العام: يعتمد نتيجة الاختبار من 100 ويقرر النجاح/البقاء.
-- ولي الأمر: يتابع ابنه فقط وتقييمات حفظه.
+## Features
 
-## تشغيل المشروع عبر Docker
+- Circle supervisor dashboard for student review and page evaluations
+- Mosque manager dashboard for student and exam request management
+- General manager dashboard for exam result approval
+- Parent dashboard for tracking a linked student's progress
 
-شغّل المشروع بالكامل من جذر المشروع:
+## Run With Docker
+
+From the project root:
 
 ```bash
 docker compose up --build
 ```
 
-الواجهة: `http://localhost:5173`  
-الـ API: `http://localhost:3000`  
-قاعدة البيانات PostgreSQL: `localhost:5432`
+App URLs:
 
-للتشغيل في الخلفية:
+- Frontend: `http://localhost:5173`
+- API: `http://localhost:3000`
+- PostgreSQL: `localhost:5432`
+
+Run in the background:
 
 ```bash
 docker compose up --build -d
 ```
 
-لإيقاف الحاويات:
+Stop containers:
 
 ```bash
 docker compose down
 ```
 
-ولحذف بيانات قاعدة البيانات أيضًا:
+Stop containers and remove database data:
 
 ```bash
 docker compose down -v
 ```
 
-يمكن تغيير سر JWT أو عنوان الـ API وقت البناء عبر ملف `.env` في جذر المشروع:
+Optional root `.env` values:
 
 ```bash
 JWT_SECRET=change_this_secret
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
-## تشغيل المشروع محليًا بدون Docker
+## Run Locally
 
-1) شغّل PostgreSQL:
+Start PostgreSQL:
 
 ```bash
-docker compose up -d
+docker compose up -d postgres
 ```
 
-2) تشغيل الباك اند:
+Start the backend:
 
 ```bash
 cd backend
@@ -67,7 +72,7 @@ npm install
 npm run start:dev
 ```
 
-3) تشغيل الفرونت اند:
+Start the frontend:
 
 ```bash
 cd frontend
@@ -75,27 +80,11 @@ npm install
 npm run dev
 ```
 
-الواجهة: `http://localhost:5173`  
-الـ API: `http://localhost:3000`
+## Demo Accounts
 
-## حسابات تجريبية
-
-كل الحسابات بكلمة المرور: `123456`
+All demo accounts use the password `123456`.
 
 - `supervisor@example.com`
 - `manager@example.com`
 - `general@example.com`
 - `parent@example.com`
-
-## رفع المشروع إلى GitHub
-
-نفّذ من جذر المشروع:
-
-```bash
-git init
-git add .
-git commit -m "Initial Quran circles platform MVP"
-git branch -M main
-git remote add origin https://github.com/<YOUR_USERNAME>/<YOUR_REPO>.git
-git push -u origin main
-```
