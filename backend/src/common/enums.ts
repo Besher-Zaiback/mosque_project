@@ -1,0 +1,20 @@
+export enum UserRole {
+  SUPERVISOR = 'SUPERVISOR',
+  MOSQUE_MANAGER = 'MOSQUE_MANAGER',
+  GENERAL_MANAGER = 'GENERAL_MANAGER',
+  PARENT = 'PARENT',
+  STUDENT = 'STUDENT',
+}
+
+export enum PageRating {
+  REPEAT = 'REPEAT',
+  GOOD = 'GOOD',
+  VERY_GOOD = 'VERY_GOOD',
+  EXCELLENT = 'EXCELLENT',
+}
+
+export enum ExamRequestStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}

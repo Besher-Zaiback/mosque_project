@@ -1,0 +1,9 @@
+body {
+  margin: 0;
+  font-family: Tahoma, Arial, sans-serif;
+  background: #f7f7f7;
+}
+
+#root {
+  max-width: 100%;
+}
