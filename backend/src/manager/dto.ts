@@ -57,8 +57,10 @@ export class CircleDto {
   @Max(999999)
   supervisorId?: number;
 
+  @IsOptional()
   @IsInt()
-  mosqueId!: number;
+  @Min(1)
+  mosqueId?: number;
 }
 
 export class UpdateCircleDto {

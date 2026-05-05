@@ -176,6 +176,29 @@
   transform: none;
 }
 
+/* Parent sidebar color tuning */
+.layout-parent .nav-link.active {
+  background: #0a7d45;
+  color: #fff;
+}
+
+.layout-parent .nav-link.active .nav-icon,
+.layout-parent .nav-link.active .nav-label {
+  color: #fff;
+}
+
+.layout-parent .logout-btn {
+  background: rgba(180, 35, 24, 0.2);
+  border-color: rgba(255, 107, 122, 0.35);
+  color: #ffd6db;
+}
+
+.layout-parent .logout-btn:hover {
+  background: rgba(180, 35, 24, 0.35);
+  border-color: rgba(255, 107, 122, 0.55);
+  color: #fff;
+}
+
 /* Main Content Area */
 .content {
   flex: 1;
@@ -382,6 +405,34 @@ button:active {
   align-items: center;
 }
 
+.searchRow input {
+  min-width: min(100%, 280px);
+  flex: 1;
+}
+
+.searchPanel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f7faf8;
+  border: 1px solid #e3ece7;
+  border-radius: 8px;
+}
+
+.searchPanel input {
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+}
+
+.resultMeta {
+  display: block;
+  margin-top: 0.3rem;
+  color: #647a72;
+  font-size: 13px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -504,6 +555,12 @@ td {
   border-bottom: 1px solid #f0f0f0;
   color: #333;
   vertical-align: middle;
+}
+
+.emptyCell {
+  color: #7b8f88;
+  text-align: center;
+  padding: 1.5rem;
 }
 
 tr:hover td {

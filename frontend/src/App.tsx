@@ -18,8 +18,12 @@ function App() {
       <Route element={<Shell auth={auth} />}>
         <Route path="/supervisor" element={<SupervisorPage auth={auth} />} />
         <Route path="/supervisor/evaluate" element={<SupervisorPage auth={auth} />} />
+        <Route path="/supervisor/students" element={<SupervisorPage auth={auth} />} />
         <Route path="/manager" element={<ManagerPage auth={auth} />} />
         <Route path="/manager/circles" element={<ManagerPage auth={auth} />} />
+        <Route path="/manager/students" element={<ManagerPage auth={auth} />} />
+        <Route path="/manager/accounts" element={<ManagerPage auth={auth} />} />
+        <Route path="/manager/create" element={<ManagerPage auth={auth} />} />
         <Route path="/general" element={<GeneralPage auth={auth} />} />
         <Route path="/general/mosques" element={<GeneralPage auth={auth} />} />
         <Route path="/general/exams" element={<GeneralPage auth={auth} />} />

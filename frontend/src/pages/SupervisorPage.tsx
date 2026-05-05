@@ -1,21 +1,41 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useApi } from "../api/client";
 import { Pagination } from "../components/Pagination";
+import { StudentDetails } from "../components/StudentDetails";
 import { StudentsTable } from "../components/StudentsTable";
 import type { AuthState } from "../hooks/useAuth";
-import type { Student } from "../types/models";
+import type { Student, StudentOverview } from "../types/models";
+import { getErrorMessage } from "../utils/labels";
 import { paginateItems } from "../utils/pagination";
+import { filterAndRankSearch } from "../utils/search";
 
 export function SupervisorPage({ auth }: { auth: AuthState }) {
   const request = useApi(auth);
+  const location = useLocation();
   const [students, setStudents] = useState<Student[]>([]);
   const [studentId, setStudentId] = useState("");
   const [rating, setRating] = useState("GOOD");
   const [note, setNote] = useState("");
+  const [search, setSearch] = useState("");
   const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+  const [detail, setDetail] = useState<StudentOverview | null>(null);
   const [studentsPage, setStudentsPage] = useState(1);
 
-  const paginatedStudents = paginateItems(students, studentsPage, 8);
+  const filteredStudents = filterAndRankSearch(students, search, (student) => [
+    student.id,
+    student.fullName,
+    student.email,
+    student.circle?.name,
+    student.mosque?.name,
+    student.currentPage,
+    `صفحة ${student.currentPage ?? ""}`,
+    student.remainingPages,
+    student.progressPercent,
+    `${student.progressPercent ?? 0}%`,
+  ]);
+  const paginatedStudents = paginateItems(filteredStudents, studentsPage, 8);
 
   useEffect(() => {
     void request("/supervisor/students").then((data) => {
@@ -26,6 +46,21 @@ export function SupervisorPage({ auth }: { auth: AuthState }) {
 
   const selectedStudent = students.find((student) => String(student.id) === studentId);
   const pageToEvaluate = selectedStudent?.currentPage ?? "";
+  const activeView = location.pathname.endsWith("/students")
+    ? "students"
+    : location.pathname.endsWith("/evaluate")
+      ? "evaluate"
+      : "students";
+
+  const openStudentDetails = async (id: number) => {
+    setError("");
+    setMsg("");
+    try {
+      setDetail(await request(`/students/${id}`));
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
 
   const save = async () => {
     if (!selectedStudent || pageToEvaluate === "") {
@@ -66,6 +101,14 @@ export function SupervisorPage({ auth }: { auth: AuthState }) {
         </div>
       </div>
 
+      {(msg || error) && (
+        <div className="statusStack">
+          {msg && <p className="success">{msg}</p>}
+          {error && <p className="error">{error}</p>}
+        </div>
+      )}
+
+      {activeView === "evaluate" && (
       <div className="card">
         <h2>تقييم الطالب</h2>
         <div className="grid">
@@ -87,21 +130,65 @@ export function SupervisorPage({ auth }: { auth: AuthState }) {
           <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="ملاحظة لولي الأمر" />
           <button onClick={() => void save()}>حفظ</button>
         </div>
-        {msg && <p className="success">{msg}</p>}
       </div>
+      )}
 
+      {activeView === "students" && (
       <div className="card">
-        <h2>طلاب الحلقات التابعة لك</h2>
-        <StudentsTable students={paginatedStudents.items} />
+        <div className="sectionHead">
+          <div>
+            <h2>طلاب الحلقات التابعة لك</h2>
+            <span className="resultMeta">
+              {search.trim()
+                ? `${filteredStudents.length} نتيجة من ${students.length}`
+                : `${students.length} طالب`}
+            </span>
+          </div>
+        </div>
+        <div className="searchPanel">
+          <input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setStudentsPage(1);
+            }}
+            placeholder="ابحث بالاسم، رقم الطالب، الحلقة، الصفحة، أو النسبة"
+            aria-label="بحث في الطلاب"
+          />
+          {search && (
+            <button
+              className="secondaryButton"
+              onClick={() => {
+                setSearch("");
+                setStudentsPage(1);
+              }}
+            >
+              مسح
+            </button>
+          )}
+        </div>
+        <StudentsTable
+          students={paginatedStudents.items}
+          onOpen={(id) => void openStudentDetails(id)}
+          emptyText="لا يوجد طلاب مطابقون للبحث"
+        />
         <Pagination
           page={paginatedStudents.safePage}
           totalPages={paginatedStudents.totalPages}
-          totalItems={students.length}
+          totalItems={filteredStudents.length}
           pageSize={8}
           onPageChange={setStudentsPage}
           label="الطلاب"
         />
       </div>
+      )}
+
+      {activeView === "students" && detail && (
+        <div className="card">
+          <h2>تفاصيل الطالب</h2>
+          <StudentDetails overview={detail} />
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, ILike, Repository } from 'typeorm';
+import { Between, ILike, In, QueryFailedError, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { ExamRequestStatus, PageRating, UserRole } from '../common/enums';
 import {
@@ -49,8 +49,22 @@ export class QuranService {
         managerName: 'خالد مدير الهدى',
         managerEmail: 'manager@example.com',
         circles: [
-          { name: 'حلقة الفجر', levelOrder: 1, startPage: 1, endPage: 20, supervisorName: 'سعيد مشرف الفجر', supervisorEmail: 'supervisor@example.com' },
-          { name: 'حلقة البيان', levelOrder: 2, startPage: 21, endPage: 40, supervisorName: 'مازن مشرف البيان', supervisorEmail: 'supervisor2@example.com' },
+          {
+            name: 'حلقة الفجر',
+            levelOrder: 1,
+            startPage: 1,
+            endPage: 20,
+            supervisorName: 'سعيد مشرف الفجر',
+            supervisorEmail: 'supervisor@example.com',
+          },
+          {
+            name: 'حلقة البيان',
+            levelOrder: 2,
+            startPage: 21,
+            endPage: 40,
+            supervisorName: 'مازن مشرف البيان',
+            supervisorEmail: 'supervisor2@example.com',
+          },
         ],
       },
       {
@@ -58,8 +72,22 @@ export class QuranService {
         managerName: 'راشد مدير التقوى',
         managerEmail: 'manager2@example.com',
         circles: [
-          { name: 'حلقة الإتقان', levelOrder: 1, startPage: 41, endPage: 60, supervisorName: 'بدر مشرف الإتقان', supervisorEmail: 'supervisor3@example.com' },
-          { name: 'حلقة النور', levelOrder: 2, startPage: 61, endPage: 80, supervisorName: 'رامي مشرف النور', supervisorEmail: 'supervisor4@example.com' },
+          {
+            name: 'حلقة الإتقان',
+            levelOrder: 1,
+            startPage: 41,
+            endPage: 60,
+            supervisorName: 'بدر مشرف الإتقان',
+            supervisorEmail: 'supervisor3@example.com',
+          },
+          {
+            name: 'حلقة النور',
+            levelOrder: 2,
+            startPage: 61,
+            endPage: 80,
+            supervisorName: 'رامي مشرف النور',
+            supervisorEmail: 'supervisor4@example.com',
+          },
         ],
       },
       {
@@ -67,8 +95,22 @@ export class QuranService {
         managerName: 'عصام مدير الرحمة',
         managerEmail: 'manager3@example.com',
         circles: [
-          { name: 'حلقة اليقين', levelOrder: 1, startPage: 81, endPage: 100, supervisorName: 'أمير مشرف اليقين', supervisorEmail: 'supervisor5@example.com' },
-          { name: 'حلقة السكينة', levelOrder: 2, startPage: 101, endPage: 120, supervisorName: 'شادي مشرف السكينة', supervisorEmail: 'supervisor6@example.com' },
+          {
+            name: 'حلقة اليقين',
+            levelOrder: 1,
+            startPage: 81,
+            endPage: 100,
+            supervisorName: 'أمير مشرف اليقين',
+            supervisorEmail: 'supervisor5@example.com',
+          },
+          {
+            name: 'حلقة السكينة',
+            levelOrder: 2,
+            startPage: 101,
+            endPage: 120,
+            supervisorName: 'شادي مشرف السكينة',
+            supervisorEmail: 'supervisor6@example.com',
+          },
         ],
       },
       {
@@ -76,8 +118,22 @@ export class QuranService {
         managerName: 'نزار مدير الإحسان',
         managerEmail: 'manager4@example.com',
         circles: [
-          { name: 'حلقة التلاوة', levelOrder: 1, startPage: 121, endPage: 140, supervisorName: 'وائل مشرف التلاوة', supervisorEmail: 'supervisor7@example.com' },
-          { name: 'حلقة الارتقاء', levelOrder: 2, startPage: 141, endPage: 160, supervisorName: 'صفوان مشرف الارتقاء', supervisorEmail: 'supervisor8@example.com' },
+          {
+            name: 'حلقة التلاوة',
+            levelOrder: 1,
+            startPage: 121,
+            endPage: 140,
+            supervisorName: 'وائل مشرف التلاوة',
+            supervisorEmail: 'supervisor7@example.com',
+          },
+          {
+            name: 'حلقة الارتقاء',
+            levelOrder: 2,
+            startPage: 141,
+            endPage: 160,
+            supervisorName: 'صفوان مشرف الارتقاء',
+            supervisorEmail: 'supervisor8@example.com',
+          },
         ],
       },
       {
@@ -85,20 +141,65 @@ export class QuranService {
         managerName: 'حسام مدير البركة',
         managerEmail: 'manager5@example.com',
         circles: [
-          { name: 'حلقة الرواد', levelOrder: 1, startPage: 161, endPage: 180, supervisorName: 'تمام مشرف الرواد', supervisorEmail: 'supervisor9@example.com' },
-          { name: 'حلقة المنهاج', levelOrder: 2, startPage: 181, endPage: 200, supervisorName: 'لؤي مشرف المنهاج', supervisorEmail: 'supervisor10@example.com' },
+          {
+            name: 'حلقة الرواد',
+            levelOrder: 1,
+            startPage: 161,
+            endPage: 180,
+            supervisorName: 'تمام مشرف الرواد',
+            supervisorEmail: 'supervisor9@example.com',
+          },
+          {
+            name: 'حلقة المنهاج',
+            levelOrder: 2,
+            startPage: 181,
+            endPage: 200,
+            supervisorName: 'لؤي مشرف المنهاج',
+            supervisorEmail: 'supervisor10@example.com',
+          },
         ],
       },
     ] as const;
 
     const firstNames = [
-      'يوسف', 'عمر', 'عبدالرحمن', 'محمد', 'أحمد', 'زيد', 'أنس', 'معاذ',
-      'سلمان', 'إياد', 'سليم', 'مصعب', 'حمزة', 'ريان', 'حذيفة', 'جود',
-      'أوس', 'باسل', 'يزن', 'مهند', 'فارس', 'عبدالله', 'إبراهيم', 'طارق',
+      'يوسف',
+      'عمر',
+      'عبدالرحمن',
+      'محمد',
+      'أحمد',
+      'زيد',
+      'أنس',
+      'معاذ',
+      'سلمان',
+      'إياد',
+      'سليم',
+      'مصعب',
+      'حمزة',
+      'ريان',
+      'حذيفة',
+      'جود',
+      'أوس',
+      'باسل',
+      'يزن',
+      'مهند',
+      'فارس',
+      'عبدالله',
+      'إبراهيم',
+      'طارق',
     ];
     const lastNames = [
-      'الحافظ', 'المتقن', 'الأنصاري', 'العابد', 'السالم', 'الحموي',
-      'الخطيب', 'الرفاعي', 'المقدسي', 'التميمي', 'الشافعي', 'النجار',
+      'الحافظ',
+      'المتقن',
+      'الأنصاري',
+      'العابد',
+      'السالم',
+      'الحموي',
+      'الخطيب',
+      'الرفاعي',
+      'المقدسي',
+      'التميمي',
+      'الشافعي',
+      'النجار',
     ];
     const parentPrefixes = ['أبو', 'أم'];
     const evalNotes = [
@@ -116,6 +217,7 @@ export class QuranService {
     ];
 
     let studentCounter = 1;
+    let firstStudent: User | null = null;
 
     for (const mosqueSpec of mosqueSpecs) {
       const mosque = await this.mosquesRepo.save({ name: mosqueSpec.name });
@@ -151,7 +253,8 @@ export class QuranService {
           mosque,
         });
         for (let i = 0; i < 6; i += 1) {
-          const firstName = firstNames[(studentCounter - 1) % firstNames.length];
+          const firstName =
+            firstNames[(studentCounter - 1) % firstNames.length];
           const lastName = lastNames[(studentCounter - 1) % lastNames.length];
           const fullName = `${firstName} ${lastName} ${studentCounter}`;
           const currentPage =
@@ -167,6 +270,9 @@ export class QuranService {
             linkedStudentId: null,
             currentPage,
           });
+          if (!firstStudent) {
+            firstStudent = student;
+          }
           await this.usersRepo.save({
             fullName: `${parentPrefixes[studentCounter % parentPrefixes.length]} ${firstName} ${studentCounter}`,
             email: `parent${studentCounter}@example.com`,
@@ -217,6 +323,19 @@ export class QuranService {
           studentCounter += 1;
         }
       }
+    }
+
+    if (firstStudent) {
+      await this.usersRepo.save({
+        fullName: 'ولي أمر تجريبي',
+        email: 'parent@example.com',
+        passwordHash: hash,
+        role: UserRole.PARENT,
+        mosque: firstStudent.mosque,
+        circle: null,
+        linkedStudentId: firstStudent.id,
+        currentPage: null,
+      });
     }
   }
 
@@ -392,6 +511,10 @@ export class QuranService {
   }
 
   async getSupervisorStudents(supervisorId: number) {
+    const supervisor = await this.usersRepo.findOne({
+      where: { id: supervisorId, role: UserRole.SUPERVISOR },
+    });
+    if (!supervisor) throw new NotFoundException('Supervisor not found');
     const circles = await this.circlesRepo.find({
       where: { supervisor: { id: supervisorId } },
       relations: ['users'],
@@ -426,6 +549,8 @@ export class QuranService {
   ) {
     if (startPage > endPage)
       throw new BadRequestException('startPage must be <= endPage');
+    if (levelOrder < 1)
+      throw new BadRequestException('levelOrder must be >= 1');
     const mosque =
       requester.role === UserRole.GENERAL_MANAGER
         ? await this.mustGetMosque(mosqueId ?? 0)
@@ -607,7 +732,10 @@ export class QuranService {
         ? (payload.linkedStudentId ?? account.linkedStudentId)
         : null;
 
-    if (payload.role === UserRole.MOSQUE_MANAGER || payload.role === UserRole.SUPERVISOR) {
+    if (
+      payload.role === UserRole.MOSQUE_MANAGER ||
+      payload.role === UserRole.SUPERVISOR
+    ) {
       const scopedMosqueId =
         requester.role === UserRole.GENERAL_MANAGER
           ? payload.mosqueId
@@ -641,9 +769,14 @@ export class QuranService {
 
     if (payload.role === UserRole.PARENT) {
       if (!linkedStudentId) {
-        throw new BadRequestException('Parent account requires a linked student');
+        throw new BadRequestException(
+          'Parent account requires a linked student',
+        );
       }
-      const linkedStudent = await this.getManageableAccount(requester, linkedStudentId);
+      const linkedStudent = await this.getManageableAccount(
+        requester,
+        linkedStudentId,
+      );
       if (linkedStudent.role !== UserRole.STUDENT) {
         throw new BadRequestException('Linked account must be a student');
       }
@@ -682,11 +815,17 @@ export class QuranService {
         .set({ supervisor: null })
         .where('"supervisorId" = :accountId', { accountId })
         .execute();
-      await this.usersRepo.delete({ id: account.id, role: UserRole.SUPERVISOR });
+      await this.usersRepo.delete({
+        id: account.id,
+        role: UserRole.SUPERVISOR,
+      });
       return { message: 'deleted' };
     }
     if (account.role === UserRole.MOSQUE_MANAGER) {
-      await this.usersRepo.delete({ id: account.id, role: UserRole.MOSQUE_MANAGER });
+      await this.usersRepo.delete({
+        id: account.id,
+        role: UserRole.MOSQUE_MANAGER,
+      });
       return { message: 'deleted' };
     }
     throw new BadRequestException('Unsupported account type');
@@ -716,6 +855,14 @@ export class QuranService {
       if (!circle?.supervisor || circle.supervisor.id !== evaluatorId) {
         throw new BadRequestException('Student is not in your circle');
       }
+    } else if (evaluator.role === UserRole.GENERAL_MANAGER) {
+      // General managers can evaluate any student
+    } else if (evaluator.role === UserRole.MOSQUE_MANAGER) {
+      if (student.mosque?.id !== evaluator.mosque?.id) {
+        throw new BadRequestException('Student is not in your mosque');
+      }
+    } else {
+      throw new BadRequestException('You do not have permission to evaluate');
     }
     if (!student.circle) {
       throw new BadRequestException('Student is not assigned to a circle');
@@ -732,18 +879,53 @@ export class QuranService {
     ) {
       throw new BadRequestException('Page is outside the student circle range');
     }
+    if (rating !== PageRating.REPEAT) {
+      const hasNonRepeatSubmission = await this.evaluationsRepo.exist({
+        where: {
+          student: { id: studentId },
+          pageNumber,
+          rating: In([
+            PageRating.GOOD,
+            PageRating.VERY_GOOD,
+            PageRating.EXCELLENT,
+          ]),
+        },
+      });
+      if (hasNonRepeatSubmission) {
+        throw new BadRequestException(
+          'This page was already submitted as passed; use REPEAT if needed',
+        );
+      }
+    }
     student.currentPage =
       rating === PageRating.REPEAT
         ? pageNumber
         : Math.min(pageNumber + 1, student.circle.endPage);
     await this.usersRepo.save(student);
-    const evaluation = await this.evaluationsRepo.save({
-      evaluator,
-      student,
-      pageNumber,
-      rating,
-      note: note?.trim() ? note.trim() : null,
-    });
+    let evaluation: PageEvaluation;
+    try {
+      evaluation = await this.evaluationsRepo.save({
+        evaluator,
+        student,
+        pageNumber,
+        rating,
+        note: note?.trim() ? note.trim() : null,
+      });
+    } catch (error) {
+      const dbConstraint =
+        error instanceof QueryFailedError
+          ? (error as unknown as { constraint?: string }).constraint
+          : undefined;
+      if (
+        error instanceof QueryFailedError &&
+        dbConstraint === 'UQ_page_evaluation_non_repeat_once'
+      ) {
+        throw new BadRequestException(
+          'This page was already submitted as passed; use REPEAT if needed',
+        );
+      }
+      throw error;
+    }
     return {
       evaluation,
       studentProgress: this.decorateStudentProgress(student),
@@ -814,7 +996,10 @@ export class QuranService {
       .delete()
       .where('"studentId" = :studentId', { studentId })
       .execute();
-    await this.usersRepo.update({ linkedStudentId: studentId }, { linkedStudentId: null });
+    await this.usersRepo.update(
+      { linkedStudentId: studentId },
+      { linkedStudentId: null },
+    );
     await this.usersRepo.delete({ id: studentId, role: UserRole.STUDENT });
     return { message: 'deleted' };
   }
@@ -896,7 +1081,9 @@ export class QuranService {
           });
       if (nextCircle) {
         if (nextCircle.mosque?.id !== request.student.mosque?.id) {
-          throw new BadRequestException('Circle does not belong to student mosque');
+          throw new BadRequestException(
+            'Circle does not belong to student mosque',
+          );
         }
         request.student.circle = nextCircle;
         request.student.currentPage = nextCircle.startPage;
@@ -914,6 +1101,7 @@ export class QuranService {
   async parentDashboard(parentUserId: number) {
     const parent = await this.usersRepo.findOne({
       where: { id: parentUserId },
+      relations: ['mosque'],
     });
     if (!parent?.linkedStudentId)
       throw new NotFoundException('No linked student');
