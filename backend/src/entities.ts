@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -97,6 +98,10 @@ export class User {
 }
 
 @Entity()
+@Index('UQ_page_evaluation_non_repeat_once', ['student', 'pageNumber'], {
+  unique: true,
+  where: `"rating" IN ('GOOD', 'VERY_GOOD', 'EXCELLENT')`,
+})
 export class PageEvaluation {
   @PrimaryGeneratedColumn()
   id!: number;

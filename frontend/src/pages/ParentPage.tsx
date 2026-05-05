@@ -5,6 +5,7 @@ import type { AuthState } from "../hooks/useAuth";
 import type { Evaluation } from "../types/models";
 import { formatDate, getErrorMessage, getRatingLabel } from "../utils/labels";
 import { paginateItems } from "../utils/pagination";
+import { filterAndRankSearch } from "../utils/search";
 
 export function ParentPage({ auth }: { auth: AuthState }) {
   const request = useApi(auth);
@@ -20,18 +21,29 @@ export function ParentPage({ auth }: { auth: AuthState }) {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [evaluationSearch, setEvaluationSearch] = useState("");
   const [evaluationsPage, setEvaluationsPage] = useState(1);
 
   useEffect(() => {
-    setLoading(true);
-    setError("");
-    request("/parent/dashboard")
-      .then(setData)
-      .catch((err) => {
-        setError(getErrorMessage(err));
-        setData(null);
-      })
-      .finally(() => setLoading(false));
+    let active = true;
+    void Promise.resolve().then(async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const nextData = await request("/parent/dashboard");
+        if (active) setData(nextData);
+      } catch (err) {
+        if (active) {
+          setError(getErrorMessage(err));
+          setData(null);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [request]);
 
   if (loading) {
@@ -63,7 +75,16 @@ export function ParentPage({ auth }: { auth: AuthState }) {
   }
 
   const { student, evaluations = [], lastExam } = data;
-  const paginatedEvaluations = paginateItems(evaluations, evaluationsPage, 8);
+  const filteredEvaluations = filterAndRankSearch(evaluations, evaluationSearch, (evaluation) => [
+      evaluation.pageNumber,
+      `صفحة ${evaluation.pageNumber}`,
+      getRatingLabel(evaluation.rating),
+      evaluation.rating,
+      evaluation.note,
+      evaluation.evaluator?.fullName,
+      formatDate(evaluation.createdAt),
+    ]);
+  const paginatedEvaluations = paginateItems(filteredEvaluations, evaluationsPage, 8);
 
   return (
     <div className="page">
@@ -109,8 +130,25 @@ export function ParentPage({ auth }: { auth: AuthState }) {
 
       <div className="card">
         <h2>سجل التقييمات</h2>
+        <div className="inline searchRow">
+          <input
+            value={evaluationSearch}
+            onChange={(e) => {
+              setEvaluationSearch(e.target.value);
+              setEvaluationsPage(1);
+            }}
+            placeholder="بحث بالصفحة أو التقييم أو الملاحظة"
+          />
+          {evaluationSearch && (
+            <button className="secondaryButton" onClick={() => setEvaluationSearch("")}>
+              مسح
+            </button>
+          )}
+        </div>
         {evaluations.length === 0 ? (
           <p className="hint">لا توجد تقييمات سابقة</p>
+        ) : filteredEvaluations.length === 0 ? (
+          <p className="hint">لا توجد تقييمات مطابقة للبحث</p>
         ) : (
           <>
             <div className="tableWrap">
@@ -142,7 +180,7 @@ export function ParentPage({ auth }: { auth: AuthState }) {
             <Pagination
               page={paginatedEvaluations.safePage}
               totalPages={paginatedEvaluations.totalPages}
-              totalItems={evaluations.length}
+              totalItems={filteredEvaluations.length}
               pageSize={8}
               onPageChange={setEvaluationsPage}
               label="التقييمات"

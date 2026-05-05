@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Modal } from "../components/Modal";
 import { Pagination } from "../components/Pagination";
 import { useApi } from "../api/client";
@@ -8,9 +9,11 @@ import type { AuthState } from "../hooks/useAuth";
 import type { Circle, ManagedAccount, Mosque, Student, StudentOverview } from "../types/models";
 import { getErrorMessage, getRoleLabel } from "../utils/labels";
 import { paginateItems } from "../utils/pagination";
+import { filterAndRankSearch } from "../utils/search";
 
 export function ManagerPage({ auth }: { auth: AuthState }) {
   const request = useApi(auth);
+  const location = useLocation();
   const [circles, setCircles] = useState<Circle[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [accounts, setAccounts] = useState<ManagedAccount[]>([]);
@@ -23,7 +26,9 @@ export function ManagerPage({ auth }: { auth: AuthState }) {
   const [circleEnd, setCircleEnd] = useState("");
   const [circleSupervisorId, setCircleSupervisorId] = useState("");
   const [editingCircleId, setEditingCircleId] = useState<number | null>(null);
+  const [circleSearch, setCircleSearch] = useState("");
   const [search, setSearch] = useState("");
+  const [accountSearch, setAccountSearch] = useState("");
   const [detail, setDetail] = useState<StudentOverview | null>(null);
   const [accountTab, setAccountTab] = useState(1);
   const [accountName, setAccountName] = useState("");
@@ -60,9 +65,51 @@ export function ManagerPage({ auth }: { auth: AuthState }) {
           totalStudents
       )
     : 0;
-  const paginatedCircles = paginateItems(myCircles, circlesPage, 6);
-  const paginatedStudents = paginateItems(students, studentsPage, 8);
-  const paginatedAccounts = paginateItems(accounts, accountsPage, 8);
+  const filteredCircles = filterAndRankSearch(myCircles, circleSearch, (circle) => [
+      circle.id,
+      circle.name,
+      circle.levelOrder,
+      circle.mosque?.name,
+      circle.supervisor?.fullName,
+      circle.startPage,
+      circle.endPage,
+      circle.studentsCount,
+    ]);
+  const filteredStudents = filterAndRankSearch(students, search, (student) => [
+      student.id,
+      student.fullName,
+      student.email,
+      student.circle?.name,
+      student.mosque?.name,
+      student.currentPage,
+      `صفحة ${student.currentPage ?? ""}`,
+      student.remainingPages,
+      student.progressPercent,
+      `${student.progressPercent ?? 0}%`,
+    ]);
+  const filteredAccounts = filterAndRankSearch(accounts, accountSearch, (account) => [
+      account.id,
+      account.fullName,
+      account.email,
+      getRoleLabel(account.role),
+      account.role,
+      account.mosque?.name,
+      account.circle?.name,
+      account.linkedStudentId,
+      account.currentPage,
+    ]);
+  const paginatedCircles = paginateItems(filteredCircles, circlesPage, 6);
+  const paginatedStudents = paginateItems(filteredStudents, studentsPage, 8);
+  const paginatedAccounts = paginateItems(filteredAccounts, accountsPage, 8);
+  const activeView = location.pathname.endsWith("/circles")
+    ? "circles"
+    : location.pathname.endsWith("/students")
+      ? "students"
+      : location.pathname.endsWith("/accounts")
+        ? "accounts"
+        : location.pathname.endsWith("/create")
+          ? "create"
+          : "overview";
 
   const refresh = useCallback(async () => {
     const loaders = [
@@ -92,16 +139,8 @@ export function ManagerPage({ auth }: { auth: AuthState }) {
   }, [auth.user?.role, mosqueId, request]);
 
   useEffect(() => {
-    void refresh();
+    void Promise.resolve().then(refresh);
   }, [refresh]);
-
-  const doSearch = async () => {
-    setStudents(
-      search
-        ? await request(`/manager/students/search/${encodeURIComponent(search)}`)
-        : await request("/manager/students")
-    );
-  };
 
   const resetCircleEditor = () => {
     setCircleModalOpen(false);
@@ -125,6 +164,11 @@ export function ManagerPage({ auth }: { auth: AuthState }) {
 
   const saveCircle = async () => {
     setError("");
+    setMsg("");
+    if (!circleName.trim() || !circleLevel || !circleStart || !circleEnd) {
+      setError("جميع حقول الحلقة مطلوبة");
+      return;
+    }
     const payload: Record<string, unknown> = {
       name: circleName,
       levelOrder: Number(circleLevel),
@@ -167,18 +211,35 @@ export function ManagerPage({ auth }: { auth: AuthState }) {
 
   const createAccount = async () => {
     setError("");
+    setMsg("");
+    if (!accountName.trim() || !accountEmail.trim()) {
+      setError("الاسم والبريد الإلكتروني مطلوبان");
+      return;
+    }
+    if (!editingAccountId && !accountPassword.trim()) {
+      setError("كلمة المرور مطلوبة");
+      return;
+    }
     const role =
       accountTab === 1 ? "STUDENT" : accountTab === 2 ? "PARENT" : accountTab === 3 ? "SUPERVISOR" : "MOSQUE_MANAGER";
     const payload: Record<string, unknown> = {
       fullName: accountName,
       email: accountEmail,
-      password: accountPassword,
+      password: accountPassword || undefined,
       role,
     };
 
     if (accountTab === 1) {
+      if (!selectedCircleId) {
+        setError("اختر حلقة للطالب");
+        return;
+      }
       payload.circleId = Number(selectedCircleId);
     } else if (accountTab === 2) {
+      if (!linkedStudentId) {
+        setError("اختر طالباً للربط مع ولي الأمر");
+        return;
+      }
       payload.linkedStudentId = Number(linkedStudentId);
     } else if (accountTab === 4) {
       payload.mosqueId = Number(mosqueId);
@@ -320,8 +381,24 @@ export function ManagerPage({ auth }: { auth: AuthState }) {
         </div>
       </div>
 
+      {activeView === "circles" && (
       <div className="card">
         <h2>إدارة الحلقات</h2>
+        <div className="inline searchRow">
+          <input
+            value={circleSearch}
+            onChange={(e) => {
+              setCircleSearch(e.target.value);
+              setCirclesPage(1);
+            }}
+            placeholder="بحث باسم الحلقة أو الجامع أو المشرف"
+          />
+          {circleSearch && (
+            <button className="secondaryButton" onClick={() => setCircleSearch("")}>
+              مسح
+            </button>
+          )}
+        </div>
         <div className="grid">
           <input value={circleName} onChange={(e) => setCircleName(e.target.value)} placeholder="اسم الحلقة" />
           <input inputMode="numeric" value={circleLevel} onChange={(e) => setCircleLevel(e.target.value)} placeholder="ترتيب المستوى" />
@@ -364,7 +441,11 @@ export function ManagerPage({ auth }: { auth: AuthState }) {
               </tr>
             </thead>
             <tbody>
-              {paginatedCircles.items.map((circle) => (
+              {paginatedCircles.items.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="emptyCell">لا توجد حلقات مطابقة للبحث</td>
+                </tr>
+              ) : paginatedCircles.items.map((circle) => (
                 <tr key={circle.id}>
                   <td>{circle.levelOrder}</td>
                   <td>{circle.name}</td>
@@ -399,18 +480,31 @@ export function ManagerPage({ auth }: { auth: AuthState }) {
         <Pagination
           page={paginatedCircles.safePage}
           totalPages={paginatedCircles.totalPages}
-          totalItems={myCircles.length}
+          totalItems={filteredCircles.length}
           pageSize={6}
           onPageChange={setCirclesPage}
           label="الحلقات"
         />
       </div>
+      )}
 
+      {activeView === "students" && (
       <div className="card">
         <h2>إدارة الطلاب والبحث</h2>
-        <div className="inline">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="بحث بالاسم أو الرقم" />
-          <button onClick={() => void doSearch()}>بحث</button>
+        <div className="inline searchRow">
+          <input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setStudentsPage(1);
+            }}
+            placeholder="بحث بالاسم أو الرقم أو الحلقة أو الصفحة"
+          />
+          {search && (
+            <button className="secondaryButton" onClick={() => setSearch("")}>
+              مسح
+            </button>
+          )}
         </div>
         <StudentsTable
           students={paginatedStudents.items}
@@ -430,15 +524,32 @@ export function ManagerPage({ auth }: { auth: AuthState }) {
         <Pagination
           page={paginatedStudents.safePage}
           totalPages={paginatedStudents.totalPages}
-          totalItems={students.length}
+          totalItems={filteredStudents.length}
           pageSize={8}
           onPageChange={setStudentsPage}
           label="الطلاب"
         />
       </div>
+      )}
 
+      {activeView === "accounts" && (
       <div className="card">
         <h2>إدارة الحسابات</h2>
+        <div className="inline searchRow">
+          <input
+            value={accountSearch}
+            onChange={(e) => {
+              setAccountSearch(e.target.value);
+              setAccountsPage(1);
+            }}
+            placeholder="بحث بالاسم أو البريد أو الدور أو الجامع"
+          />
+          {accountSearch && (
+            <button className="secondaryButton" onClick={() => setAccountSearch("")}>
+              مسح
+            </button>
+          )}
+        </div>
         <div className="tableWrap">
           <table>
             <thead>
@@ -454,7 +565,11 @@ export function ManagerPage({ auth }: { auth: AuthState }) {
               </tr>
             </thead>
             <tbody>
-              {paginatedAccounts.items.map((account) => (
+              {paginatedAccounts.items.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="emptyCell">لا توجد حسابات مطابقة للبحث</td>
+                </tr>
+              ) : paginatedAccounts.items.map((account) => (
                 <tr key={account.id}>
                   <td>{account.fullName}</td>
                   <td>{getRoleLabel(account.role)}</td>
@@ -490,13 +605,15 @@ export function ManagerPage({ auth }: { auth: AuthState }) {
         <Pagination
           page={paginatedAccounts.safePage}
           totalPages={paginatedAccounts.totalPages}
-          totalItems={accounts.length}
+          totalItems={filteredAccounts.length}
           pageSize={8}
           onPageChange={setAccountsPage}
           label="الحسابات"
         />
       </div>
+      )}
 
+      {activeView === "create" && (
       <div className="card">
         <h2>إنشاء حسابات جديدة</h2>
         <div className="tabs">
@@ -571,8 +688,9 @@ export function ManagerPage({ auth }: { auth: AuthState }) {
           </div>
         )}
       </div>
+      )}
 
-      {detail && (
+      {activeView === "students" && detail && (
         <div className="card">
           <h2>تفاصيل الطالب</h2>
           <StudentDetails overview={detail} />

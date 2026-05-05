@@ -5,6 +5,7 @@ type StudentsTableProps = {
   onOpen?: (id: number) => void;
   onExam?: (id: number) => void;
   onRemove?: (id: number) => void;
+  emptyText?: string;
 };
 
 export function StudentsTable({
@@ -12,6 +13,7 @@ export function StudentsTable({
   onOpen,
   onExam,
   onRemove,
+  emptyText = "لا توجد نتائج",
 }: StudentsTableProps) {
   const hasActions = Boolean(onOpen || onExam || onRemove);
   return (
@@ -29,7 +31,13 @@ export function StudentsTable({
           </tr>
         </thead>
         <tbody>
-          {students.map((student) => (
+          {students.length === 0 ? (
+            <tr>
+              <td colSpan={hasActions ? 7 : 6} className="emptyCell">
+                {emptyText}
+              </td>
+            </tr>
+          ) : students.map((student) => (
             <tr key={student.id}>
               <td>{student.id}</td>
               <td>{student.fullName}</td>

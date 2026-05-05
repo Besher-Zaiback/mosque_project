@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useApi } from "../api/client";
 import { Pagination } from "../components/Pagination";
 import type { AuthState } from "../hooks/useAuth";
 import type { Circle, Mosque } from "../types/models";
+import { getErrorMessage } from "../utils/labels";
 import { paginateItems } from "../utils/pagination";
-import { ManagerPage } from "./ManagerPage";
+import { filterAndRankSearch } from "../utils/search";
 
 export function GeneralPage({ auth }: { auth: AuthState }) {
   const request = useApi(auth);
+  const location = useLocation();
   const [mosques, setMosques] = useState<Mosque[]>([]);
   const [circles, setCircles] = useState<Circle[]>([]);
   const [mosqueName, setMosqueName] = useState("");
@@ -15,19 +18,44 @@ export function GeneralPage({ auth }: { auth: AuthState }) {
   const [score, setScore] = useState("");
   const [nextCircleId, setNextCircleId] = useState("");
   const [requests, setRequests] = useState<Array<{ id: number; student: { fullName: string }; status: string }>>([]);
+  const [mosqueSearch, setMosqueSearch] = useState("");
+  const [requestSearch, setRequestSearch] = useState("");
   const [mosquesPage, setMosquesPage] = useState(1);
   const [requestsPage, setRequestsPage] = useState(1);
 
-  const paginatedMosques = paginateItems(mosques, mosquesPage, 6);
-  const paginatedRequests = paginateItems(requests, requestsPage, 6);
+  const filteredMosques = filterAndRankSearch(mosques, mosqueSearch, (mosque) => [
+    mosque.id,
+    mosque.name,
+  ]);
+  const filteredRequests = filterAndRankSearch(requests, requestSearch, (requestItem) => [
+      requestItem.id,
+      requestItem.student.fullName,
+      requestItem.status,
+    ]);
+  const paginatedMosques = paginateItems(filteredMosques, mosquesPage, 6);
+  const paginatedRequests = paginateItems(filteredRequests, requestsPage, 6);
+  const activeView = location.pathname.endsWith("/mosques")
+    ? "mosques"
+    : location.pathname.endsWith("/exams")
+      ? "exams"
+      : "overview";
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+
+  const refresh = useCallback(async () => {
+    const [mosquesData, requestsData, circlesData] = await Promise.all([
+      request("/general/mosques"),
+      request("/general/exam-requests"),
+      request("/manager/circles"),
+    ]);
+    setMosques(mosquesData);
+    setRequests(requestsData);
+    setCircles(circlesData);
+  }, [request]);
 
   useEffect(() => {
-    void Promise.all([
-      request("/general/mosques").then(setMosques),
-      request("/general/exam-requests").then(setRequests),
-      request("/manager/circles").then(setCircles),
-    ]);
-  }, [request]);
+    void Promise.resolve().then(refresh);
+  }, [refresh]);
 
   return (
     <div className="page">
@@ -49,22 +77,58 @@ export function GeneralPage({ auth }: { auth: AuthState }) {
         </div>
       </div>
 
+      {(msg || error) && (
+        <div className="statusStack">
+          {msg && <p className="success">{msg}</p>}
+          {error && <p className="error">{error}</p>}
+        </div>
+      )}
+
+      {activeView === "mosques" && (
       <div className="card">
         <h2>إدارة الجوامع</h2>
+        <div className="inline searchRow">
+          <input
+            value={mosqueSearch}
+            onChange={(e) => {
+              setMosqueSearch(e.target.value);
+              setMosquesPage(1);
+            }}
+            placeholder="بحث باسم الجامع أو رقمه"
+          />
+          {mosqueSearch && (
+            <button className="secondaryButton" onClick={() => setMosqueSearch("")}>
+              مسح
+            </button>
+          )}
+        </div>
         <div className="inline">
           <input value={mosqueName} onChange={(e) => setMosqueName(e.target.value)} placeholder="اسم الجامع" />
           <button
-            onClick={() =>
-              void request("/general/mosques", "post", { name: mosqueName }).then(async () =>
-                setMosques(await request("/general/mosques"))
-              )
-            }
+            onClick={async () => {
+              setError("");
+              setMsg("");
+              if (!mosqueName.trim()) {
+                setError("اسم الجامع مطلوب");
+                return;
+              }
+              try {
+                await request("/general/mosques", "post", { name: mosqueName });
+                setMsg("تم إضافة الجامع بنجاح");
+                setMosqueName("");
+                await refresh();
+              } catch (err) {
+                setError(getErrorMessage(err));
+              }
+            }}
           >
             إضافة جامع
           </button>
         </div>
         <div className="listGrid">
-          {paginatedMosques.items.map((mosque) => (
+          {paginatedMosques.items.length === 0 ? (
+            <p className="hint">لا توجد جوامع مطابقة للبحث</p>
+          ) : paginatedMosques.items.map((mosque: Mosque) => (
             <div key={mosque.id} className="listItemCard">
               <strong>{mosque.name}</strong>
               <span>جامع رقم {mosque.id}</span>
@@ -74,15 +138,32 @@ export function GeneralPage({ auth }: { auth: AuthState }) {
         <Pagination
           page={paginatedMosques.safePage}
           totalPages={paginatedMosques.totalPages}
-          totalItems={mosques.length}
+          totalItems={filteredMosques.length}
           pageSize={6}
           onPageChange={setMosquesPage}
           label="الجوامع"
         />
       </div>
+      )}
 
+      {activeView === "exams" && (
       <div className="card">
         <h2>طلبات الاختبار</h2>
+        <div className="inline searchRow">
+          <input
+            value={requestSearch}
+            onChange={(e) => {
+              setRequestSearch(e.target.value);
+              setRequestsPage(1);
+            }}
+            placeholder="بحث برقم الطلب أو الطالب أو الحالة"
+          />
+          {requestSearch && (
+            <button className="secondaryButton" onClick={() => setRequestSearch("")}>
+              مسح
+            </button>
+          )}
+        </div>
         <div className="tableWrap">
           <table>
             <thead>
@@ -93,7 +174,11 @@ export function GeneralPage({ auth }: { auth: AuthState }) {
               </tr>
             </thead>
             <tbody>
-              {paginatedRequests.items.map((requestItem) => (
+              {paginatedRequests.items.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="emptyCell">لا توجد طلبات مطابقة للبحث</td>
+                </tr>
+              ) : paginatedRequests.items.map((requestItem: typeof requests[0]) => (
                 <tr key={requestItem.id}>
                   <td>{requestItem.id}</td>
                   <td>{requestItem.student.fullName}</td>
@@ -108,7 +193,7 @@ export function GeneralPage({ auth }: { auth: AuthState }) {
         <Pagination
           page={paginatedRequests.safePage}
           totalPages={paginatedRequests.totalPages}
-          totalItems={requests.length}
+          totalItems={filteredRequests.length}
           pageSize={6}
           onPageChange={setRequestsPage}
           label="طلبات الاختبار"
@@ -125,19 +210,33 @@ export function GeneralPage({ auth }: { auth: AuthState }) {
             ))}
           </select>
           <button
-            onClick={() =>
-              void request(`/general/exam-requests/${reqId}/score`, "post", {
-                score: Number(score),
-                nextCircleId: nextCircleId ? Number(nextCircleId) : undefined,
-              })
-            }
+            onClick={async () => {
+              setError("");
+              setMsg("");
+              if (!reqId || !score) {
+                setError("رقم الطلب والنتيجة مطلوبة");
+                return;
+              }
+              try {
+                await request(`/general/exam-requests/${reqId}/score`, "post", {
+                  score: Number(score),
+                  nextCircleId: nextCircleId ? Number(nextCircleId) : undefined,
+                });
+                setMsg("تم اعتماد النتيجة بنجاح");
+                setReqId("");
+                setScore("");
+                setNextCircleId("");
+                await refresh();
+              } catch (err) {
+                setError(getErrorMessage(err));
+              }
+            }}
           >
             اعتماد
           </button>
         </div>
       </div>
-
-      <ManagerPage auth={auth} />
+      )}
     </div>
   );
 }
